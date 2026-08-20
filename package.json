@@ -32,10 +32,10 @@
     "prepare": "vp config"
   },
   "devDependencies": {
-    "@types/node": "^26.1.1",
+    "@types/node": "^26.2.0",
     "bumpp": "^11.1.0",
     "typescript": "^7.0.2",
-    "vite": "catalog:",
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.2.9",
     "vite-plus": "catalog:"
   },
   "devEngines": {
