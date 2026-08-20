@@ -28,8 +28,7 @@ export class Base128Decoder {
         n |= v << BigInt(56 - 7 * (i + 1));
       }
       for (let i = 0; i < 7; i++) {
-        const cc = Number((n >> BigInt(56 - 8 * (i + 1))) & 0xffn);
-        result[resultUsed + i] = cc;
+        result[resultUsed + i] = Number((n >> BigInt(56 - 8 * (i + 1))) & 0xffn);
       }
       resultUsed += chunk.length - 1;
     }
