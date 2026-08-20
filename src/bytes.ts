@@ -1,43 +1,76 @@
-import { typedArrayChunks } from "./utils.ts";
-
 export function bytesToBase128(self: Uint8Array): string {
   let result = "";
-  const selfLength = self.length;
-  for (let i = 0; i < selfLength; i += 7) {
-    const chunk0 = self[i] ?? 0;
-    const chunk1 = self[i + 1] ?? 0;
-    const chunk2 = self[i + 2] ?? 0;
-    const chunk3 = self[i + 3] ?? 0;
-    const chunk4 = self[i + 4] ?? 0;
-    const chunk5 = self[i + 5] ?? 0;
-    const chunk6 = self[i + 6] ?? 0;
+  const tempBuffer = new ArrayBuffer(8);
+  const tempBytes = new Uint8Array(tempBuffer);
+  const tempView = new DataView(tempBuffer);
+  let tempString = "";
+  for (let i = 0; i < self.length; i += 7) {
+    tempBytes.fill(0);
+    tempString = "";
 
-    const hi = (chunk0 << 16) | (chunk1 << 8) | chunk2;
-    const lo = (chunk3 << 24) | (chunk4 << 16) | (chunk5 << 8) | chunk6;
+    tempBytes.set(self.subarray(i, i + 7), 1);
 
-    const cc0 = (hi >> 21) & 0x7f;
-    const cc1 = (hi >> 14) & 0x7f;
-    const cc2 = (hi >> 7) & 0x7f;
-    const cc3 = hi & 0x7f;
-    const cc4 = (lo >> 21) & 0x7f;
-    const cc5 = (lo >> 14) & 0x7f;
-    const cc6 = (lo >> 7) & 0x7f;
-    const cc7 = lo & 0x7f;
+    const high = tempView.getUint32(0, false);
+    const low = tempView.getUint32(4, false);
 
-    const chars = String.fromCharCode(cc0, cc1, cc2, cc3, cc4, cc5, cc6, cc7);
-    const remaining = selfLength - i;
-    if (remaining < 7) {
-      result += chars.slice(0, remaining + 1);
-    } else {
-      result += chars;
-    }
+    tempString += String.fromCharCode((high >> 14) & 0x7f);
+    tempString += String.fromCharCode((high >> 7) & 0x7f);
+    tempString += String.fromCharCode(high & 0x7f);
+    tempString += String.fromCharCode((low >> 21) & 0x7f);
+    tempString += String.fromCharCode((low >> 14) & 0x7f);
+    tempString += String.fromCharCode((low >> 7) & 0x7f);
+    tempString += String.fromCharCode(low & 0x7f);
+
+    result += tempString;
+  }
+  const remainder = self.length % 7;
+  if (remainder > 0) {
+    result = result.slice(0, -(7 - remainder));
   }
   return result;
 }
 
-export function bytesSetFromBase128(
-  self: Uint8Array,
-  input: string,
-): { read: number; written: number } {}
+export function bytesFromBase128(input: string): Uint8Array<ArrayBuffer> {
+  let result = new Uint8Array(Math.ceil(input.length / 8) * 7);
+  const tempBuffer = new ArrayBuffer(8);
+  const tempBytes = new Uint8Array(tempBuffer);
+  const tempView = new DataView(tempBuffer);
+  let tempString = "";
+  for (let i = 0; i < input.length; i += 8) {
+    tempBytes.fill(0);
+    tempString = "";
 
-export function bytesFromBase128(input: string): Uint8Array {}
+    tempString = input.slice(i, i + 8).padEnd(8, "\0");
+
+    if (
+      tempString.charCodeAt(0) > 127 ||
+      tempString.charCodeAt(1) > 127 ||
+      tempString.charCodeAt(2) > 127 ||
+      tempString.charCodeAt(3) > 127 ||
+      tempString.charCodeAt(4) > 127 ||
+      tempString.charCodeAt(5) > 127 ||
+      tempString.charCodeAt(6) > 127 ||
+      tempString.charCodeAt(7) > 127
+    ) {
+      throw new SyntaxError("Found a character that cannot be part of a valid base128 string.");
+    }
+
+    const high =
+      (tempString.charCodeAt(0) << 14) | (tempString.charCodeAt(1) << 7) | tempString.charCodeAt(2);
+    const low =
+      (tempString.charCodeAt(3) << 21) |
+      (tempString.charCodeAt(4) << 14) |
+      (tempString.charCodeAt(5) << 7) |
+      tempString.charCodeAt(6);
+
+    tempView.setUint32(0, high, false);
+    tempView.setUint32(4, low, false);
+
+    result.set(tempBytes.subarray(1, 8), (i / 8) * 7);
+  }
+  const remainder = input.length % 8;
+  if (remainder > 0) {
+    result = result.subarray(0, -(8 - remainder));
+  }
+  return result;
+}

@@ -58,3 +58,11 @@ export function* stringChunks(
     yield self.slice(i, i + chunkLength);
   }
 }
+
+export function* iteratorConcat<T>(...iterators: Iterable<T>[]): IteratorObject<T, void, void> {
+  for (const iterator of iterators) {
+    for (const item of iterator) {
+      yield item;
+    }
+  }
+}
