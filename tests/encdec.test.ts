@@ -20,3 +20,22 @@ test("round-trip 256 bytes with streams", async () => {
   ).bytes();
   expect(decoded).toEqual(input);
 });
+
+test("round-trip 1,000 bytes", () => {
+  const input = Uint8Array.from({ length: 1000 }, (_, i) => i % 256);
+  const encoder = new Base128Encoder();
+  const encoded = encoder.encode(input);
+  const decoder = new Base128Decoder();
+  const decoded = decoder.decode(encoded);
+  expect(decoded).toEqual(input);
+});
+
+test("round-trip 1,000 bytes with streams", async () => {
+  const input = Uint8Array.from({ length: 1000 }, (_, i) => i % 256);
+  const decoded = await new Response(
+    ReadableStream.from([input])
+      .pipeThrough(new Base128EncoderStream())
+      .pipeThrough(new Base128DecoderStream()),
+  ).bytes();
+  expect(decoded).toEqual(input);
+});
